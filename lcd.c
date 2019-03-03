@@ -186,6 +186,14 @@ void lcd_clear(uint16_t color)
     tft_fill_data(&data, LCD_X_MAX * LCD_Y_MAX / 2);
 }
 
+void lcd_boxfill(uint16_t color,uint16_t x,uint16_t y,uint16_t w,uint16_t h)
+{
+    uint32_t data = ((uint32_t)color << 16) | (uint32_t)color;
+
+    lcd_set_area(x,y,w,h);
+    tft_fill_data(&data, w*h/2+1);
+}
+
 void lcd_draw_rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t width, uint16_t color)
 {
     uint32_t data_buf[640] = {0};
