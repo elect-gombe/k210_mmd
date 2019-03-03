@@ -13,6 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "platform.h"
+#include "spi.h"
+#include "fpioa.h"
+#include "utils.h"
+#include "sysctl.h"
+#include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "lcd.h"
@@ -20,6 +27,7 @@
 #include "font.h"
 #include "board_config.h"
 #include "3dconfig.hpp"
+#include "gpiohs.h"
 
 static lcd_ctl_t lcd_ctl;
 
@@ -132,6 +140,49 @@ void lcd_draw_string(uint16_t x, uint16_t y, char *str, uint16_t color)
     }
 }
 
+void lcd_ram_draw_string_width(char *str, uint32_t *ptr, uint16_t font_color, uint16_t bg_color,uint16_t width)
+{
+    uint8_t i = 0;
+    uint8_t j = 0;
+    uint8_t data = 0;
+    uint8_t *pdata = NULL;
+    uint32_t *pixel = NULL;
+
+    while (*str)
+    {
+        pdata = (uint8_t *)&ascii0816[(*str) * 16];
+        for (i = 0; i < 16; i++)
+        {
+            data = *pdata++;
+            pixel = ptr + i * width;
+            for (j = 0; j < 4; j++)
+            {
+                switch (data >> 6)
+                {
+                    case 0:
+                        *pixel = ((uint32_t)bg_color << 16) | bg_color;
+                        break;
+                    case 1:
+                        *pixel = ((uint32_t)font_color << 16) | bg_color;
+                        break;
+                    case 2:
+                        *pixel = ((uint32_t)bg_color << 16) | font_color;
+                        break;
+                    case 3:
+                        *pixel = ((uint32_t)font_color << 16) | font_color;
+                        break;
+                    default:
+                        *pixel = 0;
+                        break;
+                }
+                data <<= 2;
+                pixel++;
+            }
+        }
+        str++;
+        ptr += 4;
+    }
+}
 void lcd_ram_draw_string(char *str, uint32_t *ptr, uint16_t font_color, uint16_t bg_color)
 {
     uint8_t i = 0;
@@ -215,20 +266,84 @@ void lcd_draw_rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint
     tft_write_word(data_buf, ((y2 - y1 + 1) * width + 1) / 2, 0);
 }
 
-void lcd_draw_picture(uint16_t x1, uint16_t y1, uint16_t width, uint16_t height, uint32_t *ptr)
+static void spi_set_tmod(uint8_t spi_num, uint32_t tmod)
 {
-    lcd_set_area(x1, y1, x1 + width - 1, y1 + height - 1);
-    tft_write_word(ptr, width * height / 2, lcd_ctl.mode ? 2 : 0);
+    configASSERT(spi_num < SPI_DEVICE_MAX);
+    volatile spi_t *spi_handle = spi[spi_num];
+    uint8_t tmod_offset = 0;
+    switch(spi_num)
+    {
+        case 0:
+        case 1:
+        case 2:
+            tmod_offset = 8;
+            break;
+        case 3:
+        default:
+            tmod_offset = 10;
+            break;
+    }
+    set_bit(&spi_handle->ctrlr0, 3 << tmod_offset, tmod << tmod_offset);
 }
 
-uint32_t buff[320*240/2] __attribute__((aligned(64)));
-void send_line(int y,uint16_t *ptr){
-  uint32_t *b=(((uint32_t)buff)&0x0FFFFFFF)|0x40000000;
-  for(int i=0;i<320*DRAW_NLINES/2;i++){
+static int flag = 0;
+
+static
+void send_wait(dmac_channel_number_t channel_num, spi_device_num_t spi_num){
+  volatile spi_t *spi_handle = spi[spi_num];
+  dmac_wait_done(channel_num);
+
+  while ((spi_handle->sr & 0x05) != 0x04)
+    ;
+  spi_handle->ser = 0x00;
+  spi_handle->ssienr = 0x00;
+}
+
+static
+void spi_fill_data_dma_nowait(dmac_channel_number_t channel_num, spi_device_num_t spi_num, spi_chip_select_t chip_select,
+                       const uint32_t *tx_buff, size_t tx_len)
+{
+
+    configASSERT(spi_num < SPI_DEVICE_MAX && spi_num != 2);
+
+    spi_set_tmod(spi_num, SPI_TMOD_TRANS);
+    volatile spi_t *spi_handle = spi[spi_num];
+    spi_handle->dmacr = 0x2;    /*enable dma transmit*/
+    spi_handle->ssienr = 0x01;
+
+    sysctl_dma_select((sysctl_dma_channel_t)channel_num, SYSCTL_DMA_SELECT_SSI0_TX_REQ + spi_num * 2);
+    dmac_set_single_mode(channel_num, tx_buff, (void *)(&spi_handle->dr[0]), DMAC_ADDR_INCREMENT, DMAC_ADDR_NOCHANGE,
+                                DMAC_MSIZE_4, DMAC_TRANS_WIDTH_32, tx_len);
+    spi_handle->ser = 1U << chip_select;
+}
+
+void tft_write_word_nowait(uint32_t *data_buf, uint32_t length, uint32_t flag)
+{
+    gpiohs_set_pin(DCX_GPIONUM, GPIO_PV_HIGH);
+    spi_init(SPI_CHANNEL, SPI_WORK_MODE_0, SPI_FF_OCTAL, 32, 0);
+
+    spi_init_non_standard(SPI_CHANNEL, 0/*instrction length*/, 32/*address length*/, 0/*wait cycles*/,
+                          SPI_AITM_AS_FRAME_FORMAT/*spi address trans mode*/);
+    spi_fill_data_dma_nowait(DMAC_CHANNEL0, SPI_CHANNEL, SPI_SLAVE_SELECT,data_buf, length);
+}
+
+void lcd_draw_picture(uint16_t x1, uint16_t y1, uint16_t width, uint16_t height, uint32_t *ptr)
+{
+  if(flag==1){
+    send_wait(DMAC_CHANNEL0, SPI_CHANNEL);
+  }
+  flag = 1;
+  lcd_set_area(x1, y1, x1 + width - 1, y1 + height - 1);
+  tft_write_word_nowait(ptr, width * height / 2, lcd_ctl.mode ? 2 : 0);
+}
+
+void send_line(int y,uint16_t *ptr /*alignment is required*/){
+  uint32_t *b=(uint32_t*)ptr;
+  for(int i=0;i<window_width*DRAW_NLINES/2;i++){
     b[i] = ptr[0]<<16|ptr[1];
     ptr+=2;
   }
-  lcd_draw_picture(0,y,320,DRAW_NLINES,(uint32_t*)b);
+  lcd_draw_picture(0,y,window_width,DRAW_NLINES,(uint32_t*)(void*)((((uint32_t)b)&0x0FFFFFFF)|0x80000000));
 }
 
 #endif

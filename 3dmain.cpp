@@ -381,15 +381,6 @@ int main3d(void){
 #ifdef PC
     usleep(1000);
 #endif
-       static int ptime;
-       float fps;
-       fps = 1000000.f/(get_time()-ptime);
-       sprintf(fpsstr,"%.1ffps",fps);
-#ifdef USE_K210
-       lcd_boxfill(0xFFFF,0,240-12,64,12);
-       lcd_draw_string(0, 240-12, fpsstr, 0xF800);
-#endif
-       ptime = get_time();
 #ifdef VISUALDEBUG
     vdb_begin();
     vdb_frame();
@@ -464,7 +455,18 @@ int main3d(void){
       	dstrect.h = DRAW_NLINES;
       	SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &dstrect);
       }
- #elif !defined(PC)
+ #elif !defined(PC) 
+#ifdef USE_K210
+      {
+	static int ptime;
+	float fps;
+	fps = 1000000.f/(get_time()-ptime);
+	sprintf(fpsstr,"%5.1ffps",fps);
+	// lcd_boxfill(0xFFFF,0,240-12,64,12);
+	lcd_ram_draw_string_width( fpsstr, (uint32_t*)g_drawbuff[lastbuff], 0xF800,0xFFFF,window_width/2);
+	ptime = get_time();
+      }
+#endif
       send_line(draw_y*DRAW_NLINES,(uint8_t*)(g_drawbuff[lastbuff]));
  #endif
 #endif//disable output flag
