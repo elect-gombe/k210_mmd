@@ -12,7 +12,7 @@ const static int window_width = 320;
 const static int window_height = 240;
 
 //#define DISABLE_ANIMATION
-//#define DISABVLE_OUTPUT
+//#define DISABLE_OUTPUT
 
 #define DRAW_NLINES (window_height)
 #define MAXPROC_POLYNUM (300)
@@ -36,6 +36,7 @@ const static int window_height = 240;
 // #define ENDIAN_LITTLE
  #define OMIT_ZBUFFER_CONFLICT
  #define PROCESSNUM 2
+ #define OVER_VOLTAGE
 #endif
 
 
@@ -52,8 +53,7 @@ const static int window_height = 240;
 //400MHz
 // 1core,45fps, 2core:71fps
 //500MHz
-//              2core:~85fps
+//              2core:85fps
 //600MHz
-// in my configulation, not working...
-//  in quartanion.hpp, if(cos_w < 0.999) => if(1||...)
-//  it works, but not stable at all.
+//              2core:107fps~
+//700MHz~ does not working :(

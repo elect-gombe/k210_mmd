@@ -88,21 +88,24 @@ int core1_function(void *ctx)
 
 int main(void)
 {
-  //overclock settings, edit if you want
-#define MHz *1000000
-  //  sysctl_cpu_set_freq(400 MHz);
-#undef MHz  
     io_mux_init();
+#if BOARD_LICHEEDAN
+ #if defined(OVER_VOLTAGE)
+    gpiohs_set_drive_mode(CORE_VOLTAGE_GPIONUM, GPIO_DM_INPUT);
+    gpiohs_set_pin(CORE_VOLTAGE_GPIONUM, GPIO_PV_LOW);
+  //overclock settings, edit if you want
+  #define MHz *1000000
+    usleep(100000);
+    sysctl_cpu_set_freq(600 MHz);
+    usleep(100000);
+  #undef MHz
+ #endif
     io_set_power();
     lcd_init();
-#if BOARD_LICHEEDAN
     lcd_set_direction(DIR_YX_RLDU);
 #else
     lcd_set_direction(DIR_YX_RLUD);
 #endif
-    lcd_clear(RED);
-    lcd_draw_string(16, 40, "Canaan", RED);
-    lcd_draw_string(16, 80, "Kendryte K210", BLUE);
     uint64_t core = current_coreid();
     printf("Core %ld Hello world\n", core);
     // make another thread\n
