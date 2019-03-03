@@ -24,6 +24,7 @@
 #include <bsp.h>
 #include "3dmain.hpp"
 #include "gpiohs.h"
+#include "3dconfig.hpp"
 
 //uint32_t g_lcd_gram[LCD_X_MAX * LCD_Y_MAX / 2] __attribute__((aligned(128)));
 
@@ -86,11 +87,10 @@ int core1_function(void *ctx)
 
 int main(void)
 {
-  sysctl_pll_set_freq(SYSCTL_PLL0, 800000000UL);
-    sysctl_pll_set_freq(SYSCTL_PLL1, 160000000UL);
-    sysctl_pll_set_freq(SYSCTL_PLL2, 45158400UL);
-    printf("over clocked%d\n",set_cpu_freq(600));
-    printf("lcd test\n");
+  //overclock settings, edit if you want
+#define MHz *1000000
+  //  sysctl_cpu_set_freq(400 MHz);
+#undef MHz  
     io_mux_init();
     io_set_power();
     lcd_init();
@@ -105,9 +105,10 @@ int main(void)
     uint64_t core = current_coreid();
     printf("Core %ld Hello world\n", core);
     // make another thread\n
-    for(volatile int i=0;i<1000;i++);
 #if PROCESSNUM==2
-    register_core1(core1_function, NULL);
+    printf("core 1 registering...\n");
+    register_core1(core1_function, 0);
+    for(volatile int i=0;i<10000;i++);
 #endif
     main3d();
     while(1);
