@@ -29,8 +29,8 @@ enum vtaskstate{
   VTASK_POLY_DRAW,
 };
 
-struct{
-  volatile enum vtaskstate vtaskstate;
+volatile struct{
+  enum vtaskstate vtaskstate;
 #ifndef OMIT_ZBUFFER_CONFLICT
   uint16_t *drawbuff;
   unsigned short *zbuff;
@@ -372,17 +372,23 @@ int main3d(void){
 
   fvector3 n;
 
-  float disttarget = 30.f;
+  float disttarget = 25.f;
   fvector3 transtarget = fvector3(0,-12,-1.2);
   fvector3 trans = fvector3(0,-12,-1.2);
   char fpsstr[60];
   veye = fvector3(0,0,-15.5f);
   while(1){
+#ifdef PC
+    usleep(1000);
+#endif
        static int ptime;
        float fps;
        fps = 1000000.f/(get_time()-ptime);
        sprintf(fpsstr,"%.1ffps",fps);
+#ifdef USE_K210
+       lcd_boxfill(0xFFFF,0,240-12,64,12);
        lcd_draw_string(0, 240-12, fpsstr, 0xF800);
+#endif
        ptime = get_time();
 #ifdef VISUALDEBUG
     vdb_begin();
@@ -447,7 +453,8 @@ int main3d(void){
       barrier_sync();
 
       merge_screen();
-#ifdef USE_SDL
+#ifndef DISABLE_OUTPUT
+ #ifdef USE_SDL
       SDL_UpdateTexture(sdlTexture, NULL, (uint8_t*)g_drawbuff[lastbuff], window_width*2);
       {
       	SDL_Rect dstrect;
@@ -457,14 +464,16 @@ int main3d(void){
       	dstrect.h = DRAW_NLINES;
       	SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &dstrect);
       }
-#elif !defined(PC)
+ #elif !defined(PC)
       send_line(draw_y*DRAW_NLINES,(uint8_t*)(g_drawbuff[lastbuff]));
-#endif
+ #endif
+#endif//disable output flag
       lastbuff = 1-lastbuff;
     }
 #ifdef USE_SDL
        SDL_RenderPresent(sdlRenderer);
 #endif
+
 #ifdef VISUALDEBUG
     vdb_end();
 #endif
