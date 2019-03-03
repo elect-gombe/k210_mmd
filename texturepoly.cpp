@@ -50,7 +50,7 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
     //各成分の増加量の計算
     int64_t d_x;
     if(sx!=ex){
-      d_x = (1UL<<40)/(ex-sx);
+      d_x = (1LL<<40)/(ex-sx);
       deltaz = (((int64_t)(ez-sz))*d_x)>>40;
       deltaw = (((int64_t)(ew-sw))*d_x)>>40;
       deltauv.x = (((int64_t)(euv.x-suv.x))*d_x)>>40;
@@ -86,11 +86,11 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
 	wv += deltaw;
 	uv += deltauv;
 	//z test
-	if((zv>>8) < zlinebuf[i]){
+	if((zv>>8) <= zlinebuf[i]){
 	  zlinebuf[i] = (zv>>8);
 	  //テクスチャ座標の算出
-	  cu = (uv.x *((1ULL<<48)/wv)) >> (24+24);
-	  cv = (uv.y *((1ULL<<48)/wv)) >> (24+24);
+	  cu = (uv.x *((1LL<<48)/wv)) >> (24+24);
+	  cv = (uv.y *((1LL<<48)/wv)) >> (24+24);
 	  //ｚデータの書き込み
 	  uint16_t dtx;
 	  //テクスチャの取得
