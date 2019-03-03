@@ -40,7 +40,7 @@ static void io_set_power(void)
 
 // overclock and voltageboost suported XD
 //use  to configure core voltage.
-#define CORE_VOLTAGE_GPIONUM 3
+#define CORE_VOLTAGE_GPIONUM (7)
 int set_cpu_freq(uint32_t f){//MHz
   if(f<600){
     gpiohs_set_drive_mode(CORE_VOLTAGE_GPIONUM, GPIO_DM_INPUT);
@@ -62,6 +62,7 @@ static void io_mux_init(void)
     fpioa_set_function(38, FUNC_GPIOHS0 + DCX_GPIONUM);
     fpioa_set_function(36, FUNC_SPI0_SS3);
     fpioa_set_function(39, FUNC_SPI0_SCLK);
+    fpioa_set_function(37, FUNC_GPIOHS0 + RST_GPIONUM);
     sysctl_set_spi0_dvp_data(1);
 #else
     fpioa_set_function(8, FUNC_GPIOHS0 + DCX_GPIONUM);
