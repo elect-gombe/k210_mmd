@@ -1,3 +1,9 @@
+// for pc test,
+//see <devicename>.c for device specified source code
+
+// k210...k210.c
+// esp32...esp32.c
+
 #include <stdio.h>
 #include <pthread.h>
 #include <stdint.h>

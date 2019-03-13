@@ -11,13 +11,17 @@ http://opensource.org/licenses/mit-license.php
 const static int window_width = 320;
 const static int window_height = 240;
 
-//#define DISABLE_ANIMATION
+#define DISABLE_ANIMATION
 //#define DISABLE_OUTPUT
 
 #define DRAW_NLINES (window_height)
 #define MAXPROC_POLYNUM (300)
 
 #define USE_K210
+
+#if defined(PC)
+#undef USE_K210
+#endif
 
 
 #ifndef USE_K210
@@ -57,3 +61,5 @@ const static int window_height = 240;
 //600MHz
 //              2core:107fps~
 //700MHz~ does not working :(
+
+//160x120 600 dual core, onscreen, 2540 triangles, 155fps
