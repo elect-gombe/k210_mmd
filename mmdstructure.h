@@ -40,12 +40,12 @@ typedef struct _pmdmaterial {// material, including texture
 } __attribute__((__packed__)) pmdmaterial;
 
 typedef struct pmdbone {// for skeletal animation; bone based animation
-  char bonename[20];
-  uint16_t parentboneindex;	// 0xFFFF if nothing
-  uint16_t tailposboneindex;	// 0xFFFF if nothing
-  uint8_t bonetype;			// 0:rotate 1:rotate and translate 2:IK 3:unknown 4:IK effected 5:rotate effected 6:IK connected 7:unvisible 8:twist 9:rotation and translation? (8, 9はMMD4.0以降)
-  uint16_t ikparentboneindex;// 0 if nothing
-  float boneheadpos[3];
+  char name[20];
+  uint16_t parent;	// parent bone index, 0xFFFF if nothing
+  uint16_t tailpos;	// 0xFFFF if nothing
+  uint8_t type;			// 0:rotate 1:rotate and translate 2:IK 3:unknown 4:IK effected 5:rotate effected 6:IK connected 7:unvisible 8:twist 9:rotation and translation? (8, 9: MMD v4.0 or later)
+  uint16_t ikparent;// 0 if nothing
+  float headpos[3];
 } __attribute__((__packed__)) pmdbone;
 
 typedef struct _pmdik { //for inverse kinematics

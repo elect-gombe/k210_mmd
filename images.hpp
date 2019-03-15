@@ -6,7 +6,6 @@
 #include <string.h>
 #include "fileio.h"
 
-
 namespace imgs{
   namespace bmp{
     //common header

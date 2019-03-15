@@ -49,8 +49,9 @@ public:
   uint32_t texturecount;
   uint16_t **texture;
 
-  uint32_t bonecount;
+  uint16_t bonecount;
   bone_t *bonelist;
+  char **bonenamelist;
 
   uint32_t mixedbonecount;
   mixedbone *mixedbonelist;

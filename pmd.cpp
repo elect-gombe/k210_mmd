@@ -87,6 +87,25 @@ pmd::pmd(const char *pathname){
       materialfacecountlist[i]=m.facevert_count/3;
     }
   }
+
+  filread(f,&bonecount,2);
+  bonelist = (bone_t*)malloc(sizeof(bone_t)*bonecount);
+  bonenamelist = (char**)malloc(sizeof(char*)*bonecount);
+  {// load bone and animation
+    //bone name list is not needed after loading materials.
+    pmdbone b;
+    for(int i=0;i<bonecount;i++){
+      filread(f,&b,sizeof(pmdbone));
+      b.name[19]=0;//fix me, support up to 20 charactors.(19 right now.)
+      bonenamelist[i] = (char*)malloc(sizeof(char)*(strlen(b.name)+1));
+      strcpy(bonenamelist[i],b.name);
+      bonelist[i].parent = b.parent;
+      bonelist[i].pos.x = b.headpos[0];
+      bonelist[i].pos.y = b.headpos[1];
+      bonelist[i].pos.z = b.headpos[2];
+    }
+  }
+  
 }
 
 void pmd::calcvertexes(){
