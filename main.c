@@ -10,6 +10,7 @@
 #include "3dconfig.hpp"
 #include <stdlib.h>
 #include <string.h>
+#include "fileio.h"
 
 #ifndef USE_K210
 #ifdef __cplusplus
@@ -20,6 +21,17 @@ int main3d(void);
 #ifdef __cplusplus
 };
 #endif
+
+//for pc implementation:)
+typedef void* fil;
+int filopen(const char *pathname,fil *f){
+  *f = fopen(pathname,"r");
+  return *f==0; //not 0...fail, 0...success
+}
+
+int filread(fil fp,void *buff,size_t byte){
+  return fread(buff,1,byte,(FILE*)fp);
+}
 
 #ifdef OUTPUTTERMINAL
 void send_line(int ypos,uint8_t *data){
@@ -57,11 +69,11 @@ void send_line(int ypos,uint8_t *data){
 extern "C"{
   uint64_t get_time(void);
 
-uint64_t get_time(void){
-  struct timeval currentTime;
-  gettimeofday(&currentTime, NULL);
-  return currentTime.tv_sec * (int)1e6 + currentTime.tv_usec;
-}
+  uint64_t get_time(void){
+    struct timeval currentTime;
+    gettimeofday(&currentTime, NULL);
+    return currentTime.tv_sec * (int)1e6 + currentTime.tv_usec;
+  }
 };
 
 int psnum[PROCESSNUM];
