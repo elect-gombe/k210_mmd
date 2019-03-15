@@ -6,7 +6,6 @@
 #include <string.h>
 #include "fileio.h"
 
-#warning fix me, incorrect position.
 
 namespace imgs{
   namespace bmp{
