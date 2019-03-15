@@ -7,28 +7,16 @@
 #include <SDL2/SDL.h>
 #endif
 #include <unistd.h>
-
+#include "fileio.h"
 #define ZNEAR 0.1f
-//for pc implementation:)
-typedef void* fil;
-static
-fil filopen(const char *pathname){
-  return (fil)fopen(pathname,"r");
-}
+#include "images.hpp"
 
-static 
-int filread(fil fp,void *buff,size_t byte){
-  return fread(buff,1,byte,(FILE*)fp);
-}
-
-void fail(){
-  //todo
-  while(1);
-}
-
+imgs::images il(16);
 pmd::pmd(const char *pathname){
   fil f;
-  f = filopen(pathname);
+  if(filopen(pathname,&f)!=0){
+    printf("%s cannot open\n",pathname);
+  }
 
   {//read headder
     pmdheader d;
@@ -54,7 +42,7 @@ pmd::pmd(const char *pathname){
 #define READNUM 32
     pmdvertex b[READNUM];
     int ln;
-    for(int i=0;i<vertexcount;i+=READNUM){
+    for(uint32_t i=0;i<vertexcount;i+=READNUM){
       if(vertexcount-i<READNUM){
 	ln = vertexcount-i;
       }else{
@@ -89,13 +77,16 @@ pmd::pmd(const char *pathname){
 
   //load material
   filread(f,&materialcount,4);
+  materiallist=(imgs::image*)malloc(sizeof(imgs::image)*materialcount);
+  materialfacecountlist=(uint16_t*)malloc(sizeof(uint16_t)*materialcount);
   {
-    char texture_buff[16][20];//texture name buffer;
-    for(int i=0;i<materialcount;i++){
+    for(uint32_t i=0;i<materialcount;i++){
       pmdmaterial m;
       filread(f,&m,sizeof(pmdmaterial));
+      materiallist[i]=il.get_or_add(m.texture_filename);
+      materialfacecountlist[i]=m.facevert_count/3;
     }
-  }    
+  }
 }
 
 void pmd::calcvertexes(){
@@ -114,18 +105,18 @@ void pmd::calcvertexes(){
   }
 }
 
-const uint16_t tex_body[65536] =
-  #include "texture-body"
-  ;
-
 void pmd::draw(uint16_t *drawbuff,uint16_t *zbuff){
   texturetriangle t;
   fvector4 v[3];
   fvector2 uv[3];
   int zovercount = 0;
   int face[3];
+  unsigned mati=0;
+  int nextmati=0;
 
-  for(int i=0;i<facecount;i++){
+  nextmati = materialfacecountlist[0];
+
+  for(uint32_t i=0;i<facecount;i++){
     for(int j=0;j<3;j++){
       face[j]=facelist[i*3+j];
     }
@@ -141,11 +132,12 @@ void pmd::draw(uint16_t *drawbuff,uint16_t *zbuff){
       uv[j].x = (1.f-uvlist[face[j]].x)*SIZE_TEX;
       uv[j].y = (uvlist[face[j]].y)*SIZE_TEX;
     }
-    texture_t tex={
-      tex_body
-    };
+    while(i >= nextmati){
+      mati ++;
+      nextmati += materialfacecountlist[mati];
+    }
 
-    t.triangle_set(v,1,&tex,uv);
+    t.triangle_set(v,1,&(materiallist[mati]),uv);
     t.draw(zbuff,drawbuff,0);
   }
 }
@@ -160,7 +152,7 @@ int main3d(void);
 #endif
 
 pmd::~pmd(){
-  //todo, deconstruct all elements.
+  //todo, destruct all elements.
 }
 
 int main3d(void){

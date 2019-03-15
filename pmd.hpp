@@ -6,6 +6,7 @@
 #include "fvector3.hpp"
 #include "fvector2.hpp"
 #include "matrix4.hpp"
+#include "images.hpp"
 
 struct ik_t{
   uint16_t rootid;
@@ -42,7 +43,8 @@ public:
   uint16_t *facelist; // polygonlist[polycount*3]<- it's always triangle only! (mmd restriction)
 
   uint16_t materialcount;
-  uint16_t *materiallist;
+  imgs::image *materiallist;
+  uint16_t *materialfacecountlist;
   
   uint32_t texturecount;
   uint16_t **texture;
