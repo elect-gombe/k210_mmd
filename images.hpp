@@ -6,6 +6,8 @@
 #include <string.h>
 #include "fileio.h"
 
+#warning fix me, incorrect position.
+
 namespace imgs{
   namespace bmp{
     //common header
@@ -85,6 +87,10 @@ namespace imgs{
 	  fail();
 	}
 	width = h.width;
+	if(h.compression!=3){
+	  printf("compression %d is not supported\n",h.compression);
+	  fail();
+	}
       }else{
 	printf("file format error(%d)\n",coreheadersize);
 	fail();
@@ -96,14 +102,18 @@ namespace imgs{
       width_powerof2=-1;
       for(int i=width;i!=0;i>>=1,width_powerof2++);
       data = (uint16_t*)malloc(width*width*2);
+      filread(f,data,12);
+      if(((uint32_t*)data)[0]!=0x0000F800||((uint32_t*)data)[1]!=0x000007E0||((uint32_t*)data)[2]!=0x000001F){
+	printf("bit field err, not rgb565 format\n");
+      }
       if(filread(f,data,width*width*2)!=width*width*2){
 	printf("file load err\n");
       }
       
-      static uint16_t tex_body[65536] =
-#include "texture-body"
-	;
-      data=tex_body;
+//       static uint16_t tex_body[65536] =
+// #include "texture-body"
+// 	;
+//       data=tex_body;
 
     }
   };
@@ -129,8 +139,9 @@ namespace imgs{
 	add(path,0);
       }else{
 	for(int i=0;i<n;i++){
-	  if(strcmp(path,texturenamelist[i])==0)
+	  if(strcmp(path,texturenamelist[i])==0){
 	    return imagelist[i];
+	  }
 	}
 	add(path,n);
       }
