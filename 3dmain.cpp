@@ -119,6 +119,7 @@ void initialize_draw_buffer(int ps){
   }
 #endif
 }
+#if 0
 
 
 
@@ -331,7 +332,6 @@ void merge_screen(void){
   #endif
 }
 
-#if 0
 int main3d(void){
   Matrix4 projection;
   Matrix4 obj;
