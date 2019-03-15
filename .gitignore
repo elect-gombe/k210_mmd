@@ -5,3 +5,5 @@ GRTAGS
 GTAGS
 a.out
 build
+.*
+*.bmp
