@@ -4,9 +4,15 @@
 Using latest toolchain(development branch) and standalone sdk to compile and build, and then use kflash.py to flash.
 
 
+### convert your texture bmp file
+BMP file must be RGB565 color format, you can convert bmp file by using ffmpeg.
+```
+$ ffmpeg -vcodec bmp -i <input>.bmp -vcodec bmp -pix_fmt rgb565 <texturename>.bmp
+```
+
+
 ## License
 MMD model which this project use is under the [CC BY-NC License](https://piapro.net/intl/en_for_creators.html)
-
 
 You are allowed to use this MMD model only if you follow the guideline
 set by Crypton Future Media, INC. for the usage of its characters.
