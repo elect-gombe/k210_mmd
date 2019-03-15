@@ -1,7 +1,7 @@
 # for PC test
 
 CPP      = g++
-CFLAGS  = -g -MMD -MP -DPC -DUSE_SDL
+CFLAGS  = -g3 -MMD -MP -DPC -DUSE_SDL  -Wall -Wextra -Og
 LIBS    = -lm -lSDL2
 SRC_DIR = .
 OBJ_DIR = ./build
@@ -19,7 +19,7 @@ $(TARGET): $(OBJS)
 
 $(OBJ_DIR)/%.c.o: %.c
 	mkdir -p $(OBJ_DIR);
-	$(CPP) $(CFLAGS) $(INCLUDE) -o $@ -c $< 
+	$(CPP) $(CFLAGS) $(INCLUDE) -o $@ -c $<
 
 $(OBJ_DIR)/%.cpp.o: %.cpp 
 	mkdir -p $(OBJ_DIR);
