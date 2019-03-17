@@ -11,7 +11,7 @@ http://opensource.org/licenses/mit-license.php
 const static int window_width = 320;
 const static int window_height = 240;
 
-#define DISABLE_ANIMATION
+//#define DISABLE_ANIMATION
 //#define DISABLE_OUTPUT
 
 #define DRAW_NLINES (window_height)
