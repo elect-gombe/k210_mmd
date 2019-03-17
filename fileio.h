@@ -4,6 +4,7 @@
 
 #if PC
 typedef void* fil;
+#include <unistd.h>
 #endif
 
 #if defined(__cplusplus)
@@ -23,7 +24,7 @@ int filread(fil fp,void *buff,size_t byte);
 static inline
 void fail(){
   //todo
-  while(1);
+  while(1)usleep(114514);
 }
 
 #if defined(__cplusplus)
