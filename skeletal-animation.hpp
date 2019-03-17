@@ -1,30 +1,35 @@
+#ifndef _SKELETAL_ANIMATION_H
+#define _SKELETAL_ANIMATION_H
+
 #include "matrix4.hpp"
 #include "fvector3.hpp"
 #include "quaternion.hpp"
-#include "motion.h"
+//#include "motion.h"
+#include "pmd.hpp"
+#include "vmd.hpp"
 
 #ifdef VISUALDEBUG
 #include "vdb.h"
 #endif
 
-struct  bone_t{
-  int16_t parent;
-  fvector3_t pos;
-};
+// struct  bone_t{
+//   int16_t parent;
+//   fvector3_t pos;
+// };
 
-struct mixedbone_t{
-  uint8_t weight;
-  uint16_t bone[2];
-};
+// struct mixedbone_t{
+//   uint8_t weight;
+//   uint16_t bone[2];
+// };
 
-struct ik_t{
-  uint16_t rootid;
-  uint16_t targetid;
-  uint16_t len;
-  const uint16_t data[5];
-  uint8_t looptimes;
-  float anglelimit;
-};
+// struct ik_t{
+//   uint16_t rootid;
+//   uint16_t targetid;
+//   uint16_t len;
+//   const uint16_t data[5];
+//   uint8_t looptimes;
+//   float anglelimit;
+// };
 
 extern "C"{
   uint64_t get_time(void);
@@ -38,16 +43,13 @@ int64_t getMicrotime(){
   return get_time();
 }
 
-extern const
-mixedbone_t mixedbone[];
-
-extern const
-ik_t iks[7];
+// extern const
+// mixedbone_t mixedbone[];
 
 //this value includes all bone and mixed transformation matrix.
-#define MAX_MATRIX 160
+#define MAX_MATRIX 200
 
-#define MAX_BONE_NUM 92
+#define MAX_BONE_NUM 200
 
 #define ROOTID -1
 
@@ -62,7 +64,7 @@ int hiza[]={
 };
 
 // ref https://veeenu.github.io/2014/05/09/implementing-skeletal-animation.html
-int ft;
+//int ft;
 class bone{
 public:
   Matrix4 transform;
@@ -71,6 +73,7 @@ public:
   bone *parent=0;
   fvector3 basepos;
   Matrix4 modellocal;
+  pmd *model;
 
   bone(){}
   
@@ -124,14 +127,14 @@ public:
   fvector3 pos[2][300];
   quaternion q[2][300];
   int frametime[2][300]={};
+  pmd *p;
 
-  void init(const bone_t* bones,int n,int mn){
+  void init(const bone_t* bones,int n,motion_t *motion,pmd *model){
     int i;
     for(i=0;i<300;i++){
       frametime[0][i]=-1;
     }
     num = n;
-    nummixed = mn;
     // listbone[num-2].initbone(NULL,NULL,&bones[num-2]);
     for(int i=0;i<num;i++){
       if(bones[i].parent!=-1)
@@ -141,11 +144,14 @@ public:
       }
     }
     mp = motion;
+    p = model;
+    //    printf("%p",motion);
   }
 
   void setpose(float t){
     fvector3 p;
     quaternion r;
+    static int cnt;
     while(1){
       if(mp->boneid == -1)goto cont;
       if(mp->frame == -1)break;
@@ -160,10 +166,11 @@ public:
 	q[1][mp->boneid] = q[0][mp->boneid];
 	q[0][mp->boneid] = quaternion(mp->rotation);
       }else{
-	// printf("%f\n",frametime[1][mp->boneid]-t);
+	//	printf("%f\n",frametime[1][mp->boneid]-t);
 	break;
       }
     cont:
+      //      printf("%d\n",cnt++);
       mp++;
     }
     for(int i=0;i<num;i++){
@@ -232,9 +239,6 @@ public:
       // listbone[i].init.print();
       // std::cout<<i<<std::endl;
       //      (listbone[i].ofs*listbone[i].transform).print();
-    }
-    for(int i=num;i<num+nummixed;i++){
-      boneworld[i] = (boneworld[mixedbone[i-num].bone[0]]*(1.f-(mixedbone[i-num].weight*0.01f))+boneworld[mixedbone[i-num].bone[1]]*(mixedbone[i-num].weight*0.01f));
     }
   }
 
@@ -320,9 +324,9 @@ public:
   }
 
   void updateiks(void){
-    for(int i=0;i<// 1||false&&
-	  (int)(sizeof(iks)/sizeof(iks[0]));i++){
-	update1ik(&iks[i]);
+    for(int i=0;i<p->ikcount;i++){
+	update1ik(p->iklist[i]);
       }
     }
 };
+#endif //_SKELETAL_ANIMATION_H

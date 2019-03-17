@@ -49,11 +49,11 @@ typedef struct pmdbone {// for skeletal animation; bone based animation
 } __attribute__((__packed__)) pmdbone;
 
 typedef struct _pmdik { //for inverse kinematics
-  uint16_t ikboneindex;
-  uint16_t iktargetboneindex;
-  uint8_t ikchainlength;
+  uint16_t root;
+  uint16_t target;
+  uint8_t len;
   uint16_t iterations;
-  float controlweight;// control weight is to limit angle / cycle
+  float ctrlweight;// control weight is to limit angle / cycle
 } __attribute__((__packed__)) pmdik;
 
 typedef struct _pmdmorphs {
@@ -68,6 +68,20 @@ typedef struct _pmdbonedisp {
 } __attribute__((__packed__)) pmdbonedisp;
 
 //Physics not implemented yet... todo? execute fron flash needed?
+
+/// VMD構造体定義
+typedef struct _vmdheader {
+  uint8_t header[30];
+  char motionname[20];
+}__attribute__((__packed__)) vmdheader;
+
+typedef struct _vmdmotion {
+  char bonename[15];
+  uint32_t frame;
+  float location[3];    // model local
+  float rotation[4];	// model local
+  uint8_t interpolation[64]; /*Bejier curve interporation*/
+} __attribute__((__packed__)) vmdmotion;
 
 #ifdef __cplusplus
 }

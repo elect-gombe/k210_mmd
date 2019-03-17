@@ -7,6 +7,7 @@
 #include "fvector2.hpp"
 #include "matrix4.hpp"
 #include "images.hpp"
+#include "vmd.hpp"
 
 struct ik_t{
   uint16_t rootid;
@@ -14,7 +15,7 @@ struct ik_t{
   uint16_t len;
   uint8_t looptimes;
   float anglelimit;
-  const uint16_t data[1];//variable size, depends on len
+  uint16_t data[1];//variable size, depends on len
 };
 
 struct  bone_t{
@@ -53,15 +54,21 @@ public:
   bone_t *bonelist;
   char **bonenamelist;
 
-  uint32_t mixedbonecount;
-  mixedbone *mixedbonelist;
+  // uint32_t mixedbonecount;
+  // mixedbone *mixedbonelist;
   
-  uint32_t ikcount;
-  ik_t **ik;//ik[0].data[(variable size)]
+  uint16_t ikcount;
+  ik_t **iklist;//ik[0].data[(variable size)]
+
+  uint16_t ikknee[2];/*knee angle limit*/
 
   Matrix4 m;
+
+  vmd v;
+  
   pmd(const char *pathname);
   ~pmd();
+  void loadvmd(const char *pathname);
   void calcvertexes();
   void draw(uint16_t *drawbuff,uint16_t *zbuff);
 };

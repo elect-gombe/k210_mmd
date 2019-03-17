@@ -44,6 +44,7 @@ public:
 };
 
 // クォータニオン球面線形補間
+static inline
 quaternion slerpQuaternion(
     quaternion q1,
     quaternion q2,

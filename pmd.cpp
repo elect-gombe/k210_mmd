@@ -10,6 +10,11 @@
 #include "fileio.h"
 #define ZNEAR 0.1f
 #include "images.hpp"
+#include "skeletal-animation.hpp"
+
+
+static
+bonelist bl;
 
 imgs::images il(16);
 pmd::pmd(const char *pathname){
@@ -91,6 +96,7 @@ pmd::pmd(const char *pathname){
   filread(f,&bonecount,2);
   bonelist = (bone_t*)malloc(sizeof(bone_t)*bonecount);
   bonenamelist = (char**)malloc(sizeof(char*)*bonecount);
+  ikknee[0] = 0;
   {// load bone and animation
     //bone name list is not needed after loading materials.
     pmdbone b;
@@ -103,9 +109,37 @@ pmd::pmd(const char *pathname){
       bonelist[i].pos.x = b.headpos[0];
       bonelist[i].pos.y = b.headpos[1];
       bonelist[i].pos.z = b.headpos[2];
+      if(bonenamelist[i][0]==0x82|| //ひ
+	 bonenamelist[i][0]==0x50||
+	 bonenamelist[i][1]==0x82|| //ざ
+	 bonenamelist[i][0]==0x22){//"ひざ" means knee.
+	if(ikknee[0] == 0){
+	  ikknee[0] = i;
+	}else{
+	  ikknee[1] = i;
+	}
+      }
     }
   }
   
+  v.load("/home/gombe/workspace/program/pc/vmdtest/wavefile_v2.vmd",this);
+
+  filread(f,&ikcount,sizeof(uint16_t));
+  printf("ik=%d\n",ikcount);
+  iklist = (ik_t**)malloc(sizeof(ik_t*)*ikcount);
+  {
+    pmdik ik;
+    for(int i=0;i<ikcount;i++){
+      filread(f,&ik,sizeof(pmdik));
+      iklist[i] = (ik_t*)malloc(sizeof(ik_t)+(ik.len-1/*default length*/)*sizeof(uint16_t));
+      iklist[i]->rootid = ik.root;
+      iklist[i]->targetid = ik.target;
+      iklist[i]->len = ik.len;
+      iklist[i]->looptimes = ik.iterations;
+      iklist[i]->anglelimit = ik.ctrlweight;
+      filread(f,iklist[i]->data,sizeof(uint16_t)*ik.len);
+    }
+  }
 }
 
 void pmd::calcvertexes(){
@@ -114,8 +148,7 @@ void pmd::calcvertexes(){
 #ifdef DISABLE_ANIMATION
     f =  m.mul_fv4(fvector3(vertexlist[j]));
 #else
-#error has not implemented yet, ;)
-    //    f =  bl.boneworld[bone_index[j]].mul_fv4(fvector3(pointvec[j]));
+    f =  bl.boneworld[matrixnolist[j]&0xFF].mul_fv4(fvector3(vertexlist[j]));
 #endif
     tvertexlist[j].x=f.x*window_width+window_width/2;
     tvertexlist[j].y=f.y*window_height+window_height/2;
@@ -211,6 +244,11 @@ int main3d(void){
 
   int lastbuff=0;
   veye = fvector3(0,0,-15.5f);
+
+#ifndef DISABLE_ANIMATION
+  bl.init(p.bonelist,p.bonecount,p.v.motionlist,&p);
+#endif
+  
   while(1){
 #ifdef PC
     usleep(1000);
@@ -220,6 +258,7 @@ int main3d(void){
     vdb_frame();
 #endif
 
+    bl.calcall(p.m);
 #ifdef USE_SDL
     /* usleep(20000); */
     if(SDL_PollEvent(&ev)){
