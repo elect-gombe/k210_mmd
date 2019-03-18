@@ -58,12 +58,12 @@ namespace imgs{
 	printf("file open err(%s)\n",path);
 	fail();
       }
-      filread(f,&h,sizeof(bmp::header));
-      filread(f,&coreheadersize,4);
+      filread(&f,&h,sizeof(bmp::header));
+      filread(&f,&coreheadersize,4);
       if(coreheadersize==12){
 	// bmp os/2 format
 	bmp::os2coreheader h;
-	filread(f,&h,sizeof(bmp::os2coreheader));
+	filread(&f,&h,sizeof(bmp::os2coreheader));
 	if(h.width!=h.height){
 	  printf("%dx%d, not equal\n",h.width,h.height);
 	  fail();
@@ -75,7 +75,7 @@ namespace imgs{
 	width = h.width;
       }else if(coreheadersize==40){
 	bmp::wincoreheader h;
-	filread(f,&h,sizeof(bmp::wincoreheader));
+	filread(&f,&h,sizeof(bmp::wincoreheader));
 	if(h.width!=h.height){
 	  printf("%dx%d, not equal\n",h.width,h.height);
 	  fail();
@@ -100,11 +100,11 @@ namespace imgs{
       width_powerof2=-1;
       for(int i=width;i!=0;i>>=1,width_powerof2++);
       data = (uint16_t*)malloc(width*width*2);
-      filread(f,data,12);
+      filread(&f,data,12);
       if(((uint32_t*)data)[0]!=0x0000F800||((uint32_t*)data)[1]!=0x000007E0||((uint32_t*)data)[2]!=0x000001F){
 	printf("bit field err, not rgb565 format\n");
       }
-      if(filread(f,data,width*width*2)!=width*width*2){
+      if(filread(&f,data,width*width*2)!=width*width*2){
 	printf("file load err\n");
       }
       
@@ -133,6 +133,7 @@ namespace imgs{
     }
     
     image get_or_add(const char *path){
+      if(*path=='\0')return imagelist[0];
       if(n==0){
 	add(path,0);
       }else{

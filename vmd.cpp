@@ -13,22 +13,22 @@ void vmd::load(const char *path,pmd* model){
 
   {
     vmdheader h;
-    filread(f,&h,sizeof(vmdheader));
+    filread(&f,&h,sizeof(vmdheader));
   }
 
   {// load and convert bone name to bone index
 #define N 16
     vmdmotion m[N];
     int idx=0;
-    filread(f,&motioncount,sizeof(uint32_t));
+    filread(&f,&motioncount,sizeof(uint32_t));
     motionlist = (motion_t*)malloc(sizeof(motion_t)*motioncount);
     if(motionlist == NULL){
       fail();
     }
-    for(int i=0;i<motioncount;i+=N){
+    for(unsigned int i=0;i<motioncount;i+=N){
       int l = motioncount-i;
       if(l>N)l=N;
-      filread(f,m,sizeof(vmdmotion)*l);
+      filread(&f,m,sizeof(vmdmotion)*l);
       for(int j=0;j<l;j++){
 	m[j].bonename[14]='\0';
 	int k;
@@ -64,6 +64,8 @@ void vmd::load(const char *path,pmd* model){
     int *endframe;
     int *motionid;
     int donemotioncount=0;
+    static int pdc;
+    int time;
     endframe = (int*)calloc(model->bonecount,sizeof(int));
     motionid = (int*)calloc(model->bonecount,sizeof(int));
     if(endframe==NULL)fail();
@@ -74,7 +76,7 @@ void vmd::load(const char *path,pmd* model){
       for(int i=0;i<model->bonecount;i++){
 	motionid[i] = -1;
       }
-      for(int j=donemotioncount;j<motioncount;j++){
+      for(unsigned int j=donemotioncount;j<motioncount;j++){
 	if((motionid[motionlist[j].boneid]==-1||motionlist[motionid[motionlist[j].boneid]].frame>motionlist[j].frame)
 	   &&f>=endframe[motionlist[j].boneid]){
 	  motionid[motionlist[j].boneid] = j;
@@ -99,7 +101,12 @@ void vmd::load(const char *path,pmd* model){
 	  }
 	}
       }
-      if(donemotioncount == motioncount-1)break;
+      if(donemotioncount == (int)motioncount-1)break;
+      if(pdc==donemotioncount){
+	if(time > 100)break;
+	time++;
+      }
+      else{time=0;pdc=donemotioncount;}
       // {
       // 	int tm=endframe[0];
       // 	for(int i=1;i<model->bonecount;i++){

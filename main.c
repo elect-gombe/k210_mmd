@@ -17,20 +17,19 @@
 extern "C"{
 #endif
 void* vTask(void* prm);
-int main3d(void);
+  int main3d(const char *model,const char *motion);
 #ifdef __cplusplus
 };
 #endif
 
 //for pc implementation:)
-typedef void* fil;
 int filopen(const char *pathname,fil *f){
   *f = fopen(pathname,"r");
   return *f==0; //not 0...fail, 0...success
 }
 
-int filread(fil fp,void *buff,size_t byte){
-  return fread(buff,1,byte,(FILE*)fp);
+int filread(fil *fp,void *buff,size_t byte){
+  return fread(buff,1,byte,(FILE*)*fp);
 }
 
 #ifdef OUTPUTTERMINAL
@@ -77,7 +76,7 @@ extern "C"{
 };
 
 int psnum[PROCESSNUM];
-int main(void){
+int main(int argc,const char **argv){
 #ifdef PTHREAD
   pthread_t pthread;
   static int i;
@@ -86,6 +85,7 @@ int main(void){
     pthread_create( &pthread, NULL, &vTask, &psnum[i]);
   }
 #endif
-  main3d();
+  if(argc!=3)printf("arg err\n$ %s <.pmd (model file)> <.vmd (motion file)>\n",argv[0]);
+  main3d(argv[1],argv[2]);
 }
 #endif

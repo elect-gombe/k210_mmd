@@ -17,7 +17,7 @@ static
 bonelist bl;
 
 imgs::images il(16);
-pmd::pmd(const char *pathname){
+pmd::pmd(const char *pathname,const char *motionpath){
   fil f;
   if(filopen(pathname,&f)!=0){
     printf("%s cannot open\n",pathname);
@@ -25,7 +25,7 @@ pmd::pmd(const char *pathname){
 
   {//read headder
     pmdheader d;
-    filread(f,&d,sizeof(d));
+    filread(&f,&d,sizeof(d));
     d.name[19] = '\0';//handle force 19 charactor limit :) fix me.
     name = (char*)malloc(strlen(d.name)+1);
     if(name==NULL)fail();
@@ -33,7 +33,7 @@ pmd::pmd(const char *pathname){
   }
 
   //read vertexes
-  filread(f,&vertexcount,4);
+  filread(&f,&vertexcount,4);
   vertexlist = (fvector3_t*)malloc(sizeof(fvector3_t)*vertexcount);
   if(vertexlist==NULL)fail();
   tvertexlist = (fvector4*)malloc(sizeof(fvector4)*vertexcount);
@@ -53,7 +53,7 @@ pmd::pmd(const char *pathname){
       }else{
 	ln = READNUM;
       }
-      filread(f,&b,ln*sizeof(pmdvertex));
+      filread(&f,&b,ln*sizeof(pmdvertex));
       for(int j=0;j<ln;j++){
 	int idx;
 	idx = i+j;
@@ -75,25 +75,25 @@ pmd::pmd(const char *pathname){
   }
   
   //load faces
-  filread(f,&facecount,4);
+  filread(&f,&facecount,4);
   facecount/=3;//triangle only
   facelist = (uint16_t*)malloc(3*sizeof(uint16_t)*facecount);
-  filread(f,facelist,3*sizeof(uint16_t)*facecount);
+  filread(&f,facelist,3*sizeof(uint16_t)*facecount);
 
   //load material
-  filread(f,&materialcount,4);
+  filread(&f,&materialcount,4);
   materiallist=(imgs::image*)malloc(sizeof(imgs::image)*materialcount);
   materialfacecountlist=(uint16_t*)malloc(sizeof(uint16_t)*materialcount);
   {
     for(uint32_t i=0;i<materialcount;i++){
       pmdmaterial m;
-      filread(f,&m,sizeof(pmdmaterial));
+      filread(&f,&m,sizeof(pmdmaterial));
       materiallist[i]=il.get_or_add(m.texture_filename);
       materialfacecountlist[i]=m.facevert_count/3;
     }
   }
 
-  filread(f,&bonecount,2);
+  filread(&f,&bonecount,2);
   bonelist = (bone_t*)malloc(sizeof(bone_t)*bonecount);
   bonenamelist = (char**)malloc(sizeof(char*)*bonecount);
   ikknee[0] = 0;
@@ -101,7 +101,7 @@ pmd::pmd(const char *pathname){
     //bone name list is not needed after loading materials.
     pmdbone b;
     for(int i=0;i<bonecount;i++){
-      filread(f,&b,sizeof(pmdbone));
+      filread(&f,&b,sizeof(pmdbone));
       b.name[19]=0;//fix me, support up to 20 charactors.(19 right now.)
       bonenamelist[i] = (char*)malloc(sizeof(char)*(strlen(b.name)+1));
       strcpy(bonenamelist[i],b.name);
@@ -109,10 +109,10 @@ pmd::pmd(const char *pathname){
       bonelist[i].pos.x = b.headpos[0];
       bonelist[i].pos.y = b.headpos[1];
       bonelist[i].pos.z = b.headpos[2];
-      if(bonenamelist[i][0]==0x82|| //ひ
-	 bonenamelist[i][0]==0x50||
-	 bonenamelist[i][1]==0x82|| //ざ
-	 bonenamelist[i][0]==0x22){//"ひざ" means knee.
+      if(bonenamelist[i][0]=='\x82'&& //ひ
+	 bonenamelist[i][1]=='\x50'&&
+	 bonenamelist[i][2]=='\x82'&& //ざ
+	 bonenamelist[i][3]=='\x22'){//"ひざ" means knee.
 	if(ikknee[0] == 0){
 	  ikknee[0] = i;
 	}else{
@@ -122,22 +122,22 @@ pmd::pmd(const char *pathname){
     }
   }
   
-  v.load("/home/gombe/workspace/program/pc/vmdtest/wavefile_v2.vmd",this);
+  v.load(motionpath,this);
 
-  filread(f,&ikcount,sizeof(uint16_t));
+  filread(&f,&ikcount,sizeof(uint16_t));
   printf("ik=%d\n",ikcount);
   iklist = (ik_t**)malloc(sizeof(ik_t*)*ikcount);
   {
     pmdik ik;
     for(int i=0;i<ikcount;i++){
-      filread(f,&ik,sizeof(pmdik));
+      filread(&f,&ik,sizeof(pmdik));
       iklist[i] = (ik_t*)malloc(sizeof(ik_t)+(ik.len-1/*default length*/)*sizeof(uint16_t));
       iklist[i]->rootid = ik.root;
       iklist[i]->targetid = ik.target;
       iklist[i]->len = ik.len;
       iklist[i]->looptimes = ik.iterations;
       iklist[i]->anglelimit = ik.ctrlweight;
-      filread(f,iklist[i]->data,sizeof(uint16_t)*ik.len);
+      filread(&f,iklist[i]->data,sizeof(uint16_t)*ik.len);
     }
   }
 }
@@ -184,7 +184,7 @@ void pmd::draw(uint16_t *drawbuff,uint16_t *zbuff){
       uv[j].x = (1.f-uvlist[face[j]].x)*SIZE_TEX;
       uv[j].y = (uvlist[face[j]].y)*SIZE_TEX;
     }
-    while(i >= nextmati){
+    while((int)i >= nextmati){
       mati ++;
       nextmati += materialfacecountlist[mati];
     }
@@ -198,7 +198,7 @@ void pmd::draw(uint16_t *drawbuff,uint16_t *zbuff){
 extern "C"{
 #endif
 void* vTask(void* prm);
-int main3d(void);
+  int main3d(const char *model,const char *motion);
 #ifdef __cplusplus
 };
 #endif
@@ -207,14 +207,14 @@ pmd::~pmd(){
   //todo, destruct all elements.
 }
 
-int main3d(void){
+int main3d(const char *model,const char *motion){
   Matrix4 projection;
   Matrix4 obj;
 
   uint16_t g_drawbuff[2][window_width*DRAW_NLINES];
   uint16_t g_zbuff[window_width*DRAW_NLINES];
   //  printf("%lu\n",sizeof(float));
-  pmd p("/home/gombe/workspace/program/pc/mmdtest/初音ミク@七葉1052式.pmd");
+  pmd p(model,motion);
 #ifdef USE_SDL
   SDL_Init(SDL_INIT_VIDEO);
 
@@ -240,7 +240,7 @@ int main3d(void){
   float disttarget = 25.f;
   fvector3 transtarget = fvector3(0,-12,-1.2);
   fvector3 trans = fvector3(0,-12,-1.2);
-  char fpsstr[60];
+  //  char fpsstr[60];
 
   int lastbuff=0;
   veye = fvector3(0,0,-15.5f);

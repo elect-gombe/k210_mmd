@@ -46,11 +46,6 @@ int64_t getMicrotime(){
 // extern const
 // mixedbone_t mixedbone[];
 
-//this value includes all bone and mixed transformation matrix.
-#define MAX_MATRIX 200
-
-#define MAX_BONE_NUM 200
-
 #define ROOTID -1
 
 #define LINE(X,Y) vdb_line(X.x,X.y,-X.z,Y.x,Y.y,-Y.z)
@@ -110,7 +105,6 @@ public:
 };
 
 
-static int t;
 static int64_t begin=-1;
 static uint64_t ptime;
 
@@ -118,21 +112,28 @@ class bonelist{
 public:
   uint16_t num;
   uint16_t nummixed;
-  bone listbone[MAX_BONE_NUM];
-  Matrix4 boneworld[MAX_MATRIX];
+  bone *listbone;
+  Matrix4 *boneworld;
   const motion_t *mp;
 
   bonelist(){}
 
-  fvector3 pos[2][300];
-  quaternion q[2][300];
-  int frametime[2][300]={};
+  fvector3 *pos;
+  quaternion *q;
+  int *frametime;//calloc
   pmd *p;
 
   void init(const bone_t* bones,int n,motion_t *motion,pmd *model){
     int i;
-    for(i=0;i<300;i++){
-      frametime[0][i]=-1;
+    listbone = (bone*)malloc(sizeof(bone)*n);
+    boneworld= (Matrix4*)malloc(sizeof(Matrix4)*n);
+    pos = (fvector3*)calloc(n*2,sizeof(fvector3));
+    q = (quaternion*)malloc(sizeof(quaternion)*n*2);
+    frametime = (int*)calloc(n*2,sizeof(int));
+    for(i=0;i<n;i++){
+      frametime[i*2+0]=-1;
+      q[i*2+0] = quaternion();
+      q[i*2+1] = quaternion();
     }
     num = n;
     // listbone[num-2].initbone(NULL,NULL,&bones[num-2]);
@@ -151,20 +152,19 @@ public:
   void setpose(float t){
     fvector3 p;
     quaternion r;
-    static int cnt;
     while(1){
       if(mp->boneid == -1)goto cont;
       if(mp->frame == -1)break;
       if(mp->boneid >= num){
 	break;
       }
-      if(frametime[0][mp->boneid]<=t){
-	frametime[1][mp->boneid] = frametime[0][mp->boneid];
-	frametime[0][mp->boneid] = mp->frame;
-	pos[1][mp->boneid] = pos[0][mp->boneid];
-	pos[0][mp->boneid] = fvector3(mp->pos);
-	q[1][mp->boneid] = q[0][mp->boneid];
-	q[0][mp->boneid] = quaternion(mp->rotation);
+      if(frametime[mp->boneid*2+0]<=t){
+	frametime[mp->boneid*2+1] = frametime[mp->boneid*2+0];
+	frametime[mp->boneid*2+0] = mp->frame;
+	pos[mp->boneid*2+1] = pos[mp->boneid*2+0];
+	pos[mp->boneid*2+0] = fvector3(mp->pos);
+	q[mp->boneid*2+1] = q[mp->boneid*2+0];
+	q[mp->boneid*2+0] = quaternion(mp->rotation);
       }else{
 	//	printf("%f\n",frametime[1][mp->boneid]-t);
 	break;
@@ -175,16 +175,16 @@ public:
     }
     for(int i=0;i<num;i++){
       float ratio;
-      if(frametime[1][i]-frametime[0][i]&&frametime[1][mp->boneid] != -1&&frametime[0][mp->boneid] != -1&&frametime[0][i]>t){
-	ratio = ((float)t-frametime[1][i])/(frametime[0][i]-frametime[1][i]);
+      if(frametime[i*2+1]-frametime[i*2+0]&&frametime[mp->boneid*2+1] != -1&&frametime[mp->boneid*2+0] != -1&&frametime[i*2+0]>t){
+	ratio = ((float)t-frametime[i*2+1])/(frametime[i*2+0]-frametime[i*2+1]);
 	// if(i==50){
 	  // printf("%f\n",ratio);
 	// }
-	r = slerpQuaternion(q[1][i],q[0][i],ratio);
-	p = pos[1][i]*(1-ratio)+pos[0][i]*ratio;
+	r = slerpQuaternion(q[i*2+1],q[i*2+0],ratio);
+	p = pos[i*2+1]*(1-ratio)+pos[i*2+0]*ratio;
       }else{
-	r = q[0][i];
-	p = pos[0][i];
+	r = q[i*2+0];
+	p = pos[i*2+0];
       }
       listbone[i].settransform(p,r);
     }

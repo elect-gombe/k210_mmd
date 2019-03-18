@@ -66,7 +66,7 @@ public:
 
   vmd v;
   
-  pmd(const char *pathname);
+  pmd(const char *pathname,const char *motionpathname);
   ~pmd();
   void loadvmd(const char *pathname);
   void calcvertexes();

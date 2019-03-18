@@ -63,7 +63,7 @@ quaternion slerpQuaternion(
 
   float mult_q1;
   float mult_q2;
-  if(cos_w > 0.999f){
+  if(cos_w > 0.9f){
     mult_q1 = 1.f-t;
     mult_q2 = t;
   }else{
