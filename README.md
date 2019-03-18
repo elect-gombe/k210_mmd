@@ -4,6 +4,9 @@
 Using latest toolchain(development branch) and standalone sdk to compile and build, and then use kflash.py to flash.
 
 
+**Makefile is written for PC testing, not for K210**
+
+
 model file name is `model.pmd`, make sure that texture images must be `RGB565 format` bmp file.
 
 
