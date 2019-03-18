@@ -1,3 +1,9 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
 #include "pmd.hpp"
 #include "vmd.hpp"
 #include "fileio.h"
@@ -65,7 +71,7 @@ void vmd::load(const char *path,pmd* model){
     int *motionid;
     int donemotioncount=0;
     static int pdc;
-    int time;
+    int time=0;
     endframe = (int*)calloc(model->bonecount,sizeof(int));
     motionid = (int*)calloc(model->bonecount,sizeof(int));
     if(endframe==NULL)fail();
