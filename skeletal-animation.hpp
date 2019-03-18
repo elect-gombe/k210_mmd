@@ -12,25 +12,6 @@
 #include "vdb.h"
 #endif
 
-// struct  bone_t{
-//   int16_t parent;
-//   fvector3_t pos;
-// };
-
-// struct mixedbone_t{
-//   uint8_t weight;
-//   uint16_t bone[2];
-// };
-
-// struct ik_t{
-//   uint16_t rootid;
-//   uint16_t targetid;
-//   uint16_t len;
-//   const uint16_t data[5];
-//   uint8_t looptimes;
-//   float anglelimit;
-// };
-
 extern "C"{
   uint64_t get_time(void);
 };
@@ -43,20 +24,11 @@ int64_t getMicrotime(){
   return get_time();
 }
 
-// extern const
-// mixedbone_t mixedbone[];
-
 #define ROOTID -1
 
 #define LINE(X,Y) vdb_line(X.x,X.y,-X.z,Y.x,Y.y,-Y.z)
 
 #define POINT(X) vdb_point(X.x,X.y,-X.z)
-
-//#define SURPORT_MIXED_TRANSFORM
-const
-int hiza[]={
-  37,66,//膝のボーン
-};
 
 // ref https://veeenu.github.io/2014/05/09/implementing-skeletal-animation.html
 //int ft;
@@ -115,8 +87,6 @@ public:
   bone *listbone;
   Matrix4 *boneworld;
   const motion_t *mp;
-
-  bonelist(){}
 
   fvector3 *pos;
   quaternion *q;
@@ -265,7 +235,7 @@ public:
 	linkpos = (listbone[i].modellocal).reversetranslation();
 	localeffectpos = (listbone[i].modellocal).transpose_rotation().mul_fv3(effectpos - linkpos);
 	localtargetpos = (listbone[i].modellocal).transpose_rotation().mul_fv3(targetpos - linkpos);
-	if(hiza[0]==i||hiza[1]==i){
+	if(p->ikknee[0]==i||p->ikknee[1]==i){
 	  localeffectpos.x = 0;
 	  localtargetpos.x = 0;
 	  // vdb_color(1,0,1);
@@ -291,7 +261,7 @@ public:
 	if(cosval < 0.999999f){
 	  axis = cross(localtargetpos,localeffectpos);
 	  axis.normalize();
-	  if(hiza[0]==i||hiza[1]==i){
+	  if(p->ikknee[0]==i||p->ikknee[1]==i){
 	    if((listbone[i].transform*rotation_axis_and_cosv(-axis,cosval)).transpose_rotation()[6]<0){
 	      axis = -axis;
 	    }
