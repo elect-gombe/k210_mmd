@@ -2,7 +2,7 @@
 
 CPP      = g++
 CFLAGS  = -g3 -MMD -MP -DPC -DUSE_SDL  -Wall -Wextra -Og
-LIBS    = -lm -lSDL2
+LIBS    = -lm -lSDL2 -lpthread
 SRC_DIR = .
 OBJ_DIR = ./build
 BUILD_DIR = .
