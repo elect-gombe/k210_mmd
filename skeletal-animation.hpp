@@ -1,30 +1,16 @@
+#ifndef _SKELETAL_ANIMATION_H
+#define _SKELETAL_ANIMATION_H
+
 #include "matrix4.hpp"
 #include "fvector3.hpp"
 #include "quaternion.hpp"
-#include "motion.h"
+//#include "motion.h"
+#include "pmd.hpp"
+#include "vmd.hpp"
 
 #ifdef VISUALDEBUG
 #include "vdb.h"
 #endif
-
-struct  bone_t{
-  int16_t parent;
-  fvector3_t pos;
-};
-
-struct mixedbone_t{
-  uint8_t weight;
-  uint16_t bone[2];
-};
-
-struct ik_t{
-  uint16_t rootid;
-  uint16_t targetid;
-  uint16_t len;
-  const uint16_t data[5];
-  uint8_t looptimes;
-  float anglelimit;
-};
 
 extern "C"{
   uint64_t get_time(void);
@@ -38,31 +24,14 @@ int64_t getMicrotime(){
   return get_time();
 }
 
-extern const
-mixedbone_t mixedbone[];
-
-extern const
-ik_t iks[7];
-
-//this value includes all bone and mixed transformation matrix.
-#define MAX_MATRIX 160
-
-#define MAX_BONE_NUM 92
-
 #define ROOTID -1
 
 #define LINE(X,Y) vdb_line(X.x,X.y,-X.z,Y.x,Y.y,-Y.z)
 
 #define POINT(X) vdb_point(X.x,X.y,-X.z)
 
-//#define SURPORT_MIXED_TRANSFORM
-const
-int hiza[]={
-  37,66,//膝のボーン
-};
-
 // ref https://veeenu.github.io/2014/05/09/implementing-skeletal-animation.html
-int ft;
+//int ft;
 class bone{
 public:
   Matrix4 transform;
@@ -71,6 +40,7 @@ public:
   bone *parent=0;
   fvector3 basepos;
   Matrix4 modellocal;
+  pmd *model;
 
   bone(){}
   
@@ -107,7 +77,6 @@ public:
 };
 
 
-static int t;
 static int64_t begin=-1;
 static uint64_t ptime;
 
@@ -115,23 +84,28 @@ class bonelist{
 public:
   uint16_t num;
   uint16_t nummixed;
-  bone listbone[MAX_BONE_NUM];
-  Matrix4 boneworld[MAX_MATRIX];
+  bone *listbone;
+  Matrix4 *boneworld;
   const motion_t *mp;
 
-  bonelist(){}
+  fvector3 *pos;
+  quaternion *q;
+  int *frametime;//calloc
+  pmd *p;
 
-  fvector3 pos[2][300];
-  quaternion q[2][300];
-  int frametime[2][300]={};
-
-  void init(const bone_t* bones,int n,int mn){
+  void init(const bone_t* bones,int n,motion_t *motion,pmd *model){
     int i;
-    for(i=0;i<300;i++){
-      frametime[0][i]=-1;
+    listbone = (bone*)malloc(sizeof(bone)*n);
+    boneworld= (Matrix4*)malloc(sizeof(Matrix4)*n);
+    pos = (fvector3*)calloc(n*2,sizeof(fvector3));
+    q = (quaternion*)malloc(sizeof(quaternion)*n*2);
+    frametime = (int*)calloc(n*2,sizeof(int));
+    for(i=0;i<n;i++){
+      frametime[i*2+0]=-1;
+      q[i*2+0] = quaternion();
+      q[i*2+1] = quaternion();
     }
     num = n;
-    nummixed = mn;
     // listbone[num-2].initbone(NULL,NULL,&bones[num-2]);
     for(int i=0;i<num;i++){
       if(bones[i].parent!=-1)
@@ -141,6 +115,8 @@ public:
       }
     }
     mp = motion;
+    p = model;
+    //    printf("%p",motion);
   }
 
   void setpose(float t){
@@ -152,32 +128,33 @@ public:
       if(mp->boneid >= num){
 	break;
       }
-      if(frametime[0][mp->boneid]<=t){
-	frametime[1][mp->boneid] = frametime[0][mp->boneid];
-	frametime[0][mp->boneid] = mp->frame;
-	pos[1][mp->boneid] = pos[0][mp->boneid];
-	pos[0][mp->boneid] = fvector3(mp->pos);
-	q[1][mp->boneid] = q[0][mp->boneid];
-	q[0][mp->boneid] = quaternion(mp->rotation);
+      if(frametime[mp->boneid*2+0]<=t){
+	frametime[mp->boneid*2+1] = frametime[mp->boneid*2+0];
+	frametime[mp->boneid*2+0] = mp->frame;
+	pos[mp->boneid*2+1] = pos[mp->boneid*2+0];
+	pos[mp->boneid*2+0] = fvector3(mp->pos);
+	q[mp->boneid*2+1] = q[mp->boneid*2+0];
+	q[mp->boneid*2+0] = quaternion(mp->rotation);
       }else{
-	// printf("%f\n",frametime[1][mp->boneid]-t);
+	//	printf("%f\n",frametime[1][mp->boneid]-t);
 	break;
       }
     cont:
+      //      printf("%d\n",cnt++);
       mp++;
     }
     for(int i=0;i<num;i++){
       float ratio;
-      if(frametime[1][i]-frametime[0][i]&&frametime[1][mp->boneid] != -1&&frametime[0][mp->boneid] != -1&&frametime[0][i]>t){
-	ratio = ((float)t-frametime[1][i])/(frametime[0][i]-frametime[1][i]);
+      if(frametime[i*2+1]-frametime[i*2+0]&&frametime[mp->boneid*2+1] != -1&&frametime[mp->boneid*2+0] != -1&&frametime[i*2+0]>t){
+	ratio = ((float)t-frametime[i*2+1])/(frametime[i*2+0]-frametime[i*2+1]);
 	// if(i==50){
 	  // printf("%f\n",ratio);
 	// }
-	r = slerpQuaternion(q[1][i],q[0][i],ratio);
-	p = pos[1][i]*(1-ratio)+pos[0][i]*ratio;
+	r = slerpQuaternion(q[i*2+1],q[i*2+0],ratio);
+	p = pos[i*2+1]*(1-ratio)+pos[i*2+0]*ratio;
       }else{
-	r = q[0][i];
-	p = pos[0][i];
+	r = q[i*2+0];
+	p = pos[i*2+0];
       }
       listbone[i].settransform(p,r);
     }
@@ -233,9 +210,6 @@ public:
       // std::cout<<i<<std::endl;
       //      (listbone[i].ofs*listbone[i].transform).print();
     }
-    for(int i=num;i<num+nummixed;i++){
-      boneworld[i] = (boneworld[mixedbone[i-num].bone[0]]*(1.f-(mixedbone[i-num].weight*0.01f))+boneworld[mixedbone[i-num].bone[1]]*(mixedbone[i-num].weight*0.01f));
-    }
   }
 
   void update1ik(const ik_t *ik){
@@ -261,7 +235,7 @@ public:
 	linkpos = (listbone[i].modellocal).reversetranslation();
 	localeffectpos = (listbone[i].modellocal).transpose_rotation().mul_fv3(effectpos - linkpos);
 	localtargetpos = (listbone[i].modellocal).transpose_rotation().mul_fv3(targetpos - linkpos);
-	if(hiza[0]==i||hiza[1]==i){
+	if(p->ikknee[0]==i||p->ikknee[1]==i){
 	  localeffectpos.x = 0;
 	  localtargetpos.x = 0;
 	  // vdb_color(1,0,1);
@@ -287,7 +261,7 @@ public:
 	if(cosval < 0.999999f){
 	  axis = cross(localtargetpos,localeffectpos);
 	  axis.normalize();
-	  if(hiza[0]==i||hiza[1]==i){
+	  if(p->ikknee[0]==i||p->ikknee[1]==i){
 	    if((listbone[i].transform*rotation_axis_and_cosv(-axis,cosval)).transpose_rotation()[6]<0){
 	      axis = -axis;
 	    }
@@ -320,9 +294,9 @@ public:
   }
 
   void updateiks(void){
-    for(int i=0;i<// 1||false&&
-	  (int)(sizeof(iks)/sizeof(iks[0]));i++){
-	update1ik(&iks[i]);
+    for(int i=0;i<p->ikcount;i++){
+	update1ik(p->iklist[i]);
       }
     }
 };
+#endif //_SKELETAL_ANIMATION_H

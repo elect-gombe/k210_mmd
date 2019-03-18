@@ -11,6 +11,7 @@ http://opensource.org/licenses/mit-license.php
 #include "vector2.hpp"
 #include "fvector4.hpp"
 #include "projpoint.hpp"
+#include "images.hpp"
 
 //テクスチャ型
 struct texture_t{
@@ -36,6 +37,8 @@ public:
   uint32_t pdz[2];
   //テクスチャデータ
   const uint16_t *tx;
+  int width;
+  int width_powerof2;
   //テクスチャ内座標
   vector2 pdt[2];
   vector2 uvdelta[2][2];
@@ -44,7 +47,7 @@ public:
   int32_t wdelta[2][2];
 public:
   texturetriangle(){}
-  int triangle_set(fvector4 px[3],float c,const texture_t *t,const fvector2 puv[3]);
+  int triangle_set(fvector4 px[3],float c,const imgs::image *t,const fvector2 puv[3]);
   int draw(uint16_t *zlinebuf,uint16_t *buff,int dry);
   static bool LessZ(const texturetriangle& rLeft, const texturetriangle& rRight) ;
 };

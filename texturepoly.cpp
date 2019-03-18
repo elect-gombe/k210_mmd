@@ -77,8 +77,8 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
     }
     {
       //描画処理
-      int shift = 8;
-      int mask = 0xFF;
+      int shift = width_powerof2;
+      int mask = width-1;
       // float smoke;
       for(int i=sx;i<ex;i++){
 	//各成分の増加計算
@@ -94,7 +94,7 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
 	  //ｚデータの書き込み
 	  uint16_t dtx;
 	  //テクスチャの取得
-	  dtx = tx[65535-
+	  dtx = tx[width*width-1-
 		   (((int)(cu)&mask)+(((int)(cv)&mask)<<shift))];
 
 	  // Checkered pattern
@@ -275,7 +275,7 @@ int texturetriangle::draw(uint16_t *zlinebuf,uint16_t *buff,int dry){
 //   return 0;
 // }
 
-int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t *tex,const fvector2 puv[3]){
+int texturetriangle::triangle_set(fvector4 px[3],const float col,const imgs::image *tex,const fvector2 puv[3]){
   fvector4 p[3];
   float delta_top_mid;
   float delta_top_btm;
@@ -293,7 +293,9 @@ int texturetriangle::triangle_set(fvector4 px[3],const float col,const texture_t
   fvector2 t2;
   fvector2 uv[3];
 
-  tx = tex->tx;
+  tx = tex->data;
+  width=tex->width;
+  width_powerof2 = tex->width_powerof2;
   yno=0;
   phase = 0;
   this->col = col;

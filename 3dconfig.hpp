@@ -19,6 +19,12 @@ const static int window_height = 240;
 
 #define USE_K210
 
+#if defined(PC)
+#undef USE_K210
+#define PROCESSNUM 2
+#define PTHREAD
+#endif
+
 
 #ifndef USE_K210
 #ifndef PC //for esp32
@@ -30,13 +36,12 @@ const static int window_height = 240;
 #else
 //  #define OUTPUTTERMINAL
 //  #define USE_SDL
-  #define PROCESSNUM 1
 #endif
-#else
+#else//k210
 // #define ENDIAN_LITTLE
  #define OMIT_ZBUFFER_CONFLICT
  #define PROCESSNUM 2
- #define OVER_VOLTAGE
+// #define OVER_VOLTAGE
 #endif
 
 
@@ -57,3 +62,5 @@ const static int window_height = 240;
 //600MHz
 //              2core:107fps~
 //700MHz~ does not working :(
+
+//160x120 600 dual core, onscreen, 2540 triangles, 155fps

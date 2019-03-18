@@ -4,3 +4,9 @@ GPATH
 GRTAGS
 GTAGS
 a.out
+build
+.*
+*.bmp
+3dmain.cpp
+*.pmd
+*.vmd
