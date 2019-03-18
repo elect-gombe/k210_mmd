@@ -1,3 +1,9 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
 #ifndef _TEXTURE_IMAGE
 #define _TEXTURE_IMAGE
 
@@ -107,12 +113,6 @@ namespace imgs{
       if(filread(&f,data,width*width*2)!=width*width*2){
 	printf("file load err\n");
       }
-      
-//       static uint16_t tex_body[65536] =
-// #include "texture-body"
-// 	;
-//       data=tex_body;
-
     }
   };
   
@@ -127,7 +127,7 @@ namespace imgs{
       texturenamelist[idx]=(char*)malloc(strlen(path)+1);
       strcpy(texturenamelist[idx],path);
     }
-    images(int max){
+    void init(int max){
       imagelist = (image*)malloc(sizeof(image)*max);
       texturenamelist = (char**)malloc(sizeof(char*)*max);
     }

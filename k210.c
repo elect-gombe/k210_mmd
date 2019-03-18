@@ -25,8 +25,23 @@
 #include "3dmain.hpp"
 #include "gpiohs.h"
 #include "3dconfig.hpp"
+#include "fileio.h"
+#include "sdcard.h"
 
 //uint32_t g_lcd_gram[LCD_X_MAX * LCD_Y_MAX / 2] __attribute__((aligned(128)));
+
+//for pc implementation:)
+int filopen(const char *pathname,fil *f){
+  return f_open(f,pathname,FA_READ);
+}
+
+int filread(fil *fp,void *buff,size_t byte){
+  unsigned int ra;
+  FRESULT r;
+  r = f_read(fp,buff,byte,&ra);
+  if(r)return 0/*fail*/;
+  return ra;
+}
 
 static void io_set_power(void)
 {
@@ -40,7 +55,7 @@ static void io_set_power(void)
 
 // overclock and voltageboost suported XD
 //use  to configure core voltage.
-#define CORE_VOLTAGE_GPIONUM (7)
+#define CORE_VOLTAGE_GPIONUM (5)
 int set_cpu_freq(uint32_t f){//MHz
   if(f<600){
     gpiohs_set_drive_mode(CORE_VOLTAGE_GPIONUM, GPIO_DM_INPUT);
@@ -58,6 +73,11 @@ int set_cpu_freq(uint32_t f){//MHz
 static void io_mux_init(void)
 {
 #if BOARD_LICHEEDAN
+    fpioa_set_function(27, FUNC_SPI1_SCLK);
+    fpioa_set_function(28, FUNC_SPI1_D0);
+    fpioa_set_function(26, FUNC_SPI1_D1);
+    fpioa_set_function(29, FUNC_GPIOHS7);
+
     fpioa_set_function(11, FUNC_GPIOHS0 + CORE_VOLTAGE_GPIONUM);
     fpioa_set_function(38, FUNC_GPIOHS0 + DCX_GPIONUM);
     fpioa_set_function(36, FUNC_SPI0_SS3);
@@ -65,6 +85,7 @@ static void io_mux_init(void)
     fpioa_set_function(37, FUNC_GPIOHS0 + RST_GPIONUM);
     sysctl_set_spi0_dvp_data(1);
 #else
+#error todo
     fpioa_set_function(8, FUNC_GPIOHS0 + DCX_GPIONUM);
     fpioa_set_function(6, FUNC_SPI0_SS3);
     fpioa_set_function(7, FUNC_SPI0_SCLK);
@@ -88,6 +109,7 @@ int core1_function(void *ctx)
 
 int main(void)
 {
+  FATFS sdfs;
     io_mux_init();
 #if BOARD_LICHEEDAN
  #if defined(OVER_VOLTAGE)
@@ -114,7 +136,25 @@ int main(void)
     register_core1(core1_function, 0);
     for(volatile int i=0;i<10000;i++);
 #endif
-    main3d();
+
+    /* SD card init */
+    if (sd_init())
+      {
+        printf("Fail to init SD card\n");
+        return -1;
+      }
+
+    /* mount file system to SD card */
+    if (f_mount(&sdfs, _T("0:"), 1))
+      {
+        printf("Fail to mount file system\n");
+        return -1;
+      }
+
+    /* system start */
+    printf("system start\n");
+
+    main3d("model.pmd","motion.vmd");
     while(1);
 }
 #endif

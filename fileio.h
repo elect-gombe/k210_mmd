@@ -1,12 +1,13 @@
 #ifndef _FILE_IO_H
 #define _FILE_IO_H
 
-
+#include "3dconfig.hpp"
 #if defined(PC)
 typedef void* fil;
 #include <unistd.h>
-#elif defined(K210)
-typedef FIL fil;
+#elif defined(USE_K210)
+ #include "ff.h"
+ typedef FIL fil;
 #endif
 
 
