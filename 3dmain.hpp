@@ -5,7 +5,7 @@
 extern "C"{
 #endif
 
-  int main3d();
+  int main3d(const char *model,const char *motion);
   void *vTask(void*);
   int kbhit(void);
   void send_line(int ypos, uint8_t *line);
