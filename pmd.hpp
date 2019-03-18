@@ -1,3 +1,9 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
 #ifndef _PMD_HPP
 #define _PMD_HPP
 
@@ -66,11 +72,10 @@ public:
 
   vmd v;
   
-  pmd(const char *pathname,const char *motionpathname);
-  ~pmd();
+  void init(const char *pathname,const char *motionpathname);
   void loadvmd(const char *pathname);
-  void calcvertexes();
-  void draw(uint16_t *drawbuff,uint16_t *zbuff);
+  void calcvertexes(int ps);
+  void draw(uint16_t *drawbuff,uint16_t *zbuff,int ps);
 };
 
   
