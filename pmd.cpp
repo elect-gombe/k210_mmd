@@ -1,3 +1,9 @@
+/**
+Copyright (c) 2018 Gombe.
+
+This software is released under the MIT License.
+http://opensource.org/licenses/mit-license.php
+*/
 #include "pmd.hpp"
 #include <stdio.h> //for poor C++ implementation at k210:(
 #include "3dconfig.hpp"
@@ -11,13 +17,23 @@
 #define ZNEAR 0.1f
 #include "images.hpp"
 #include "skeletal-animation.hpp"
-
+#include "lcd.h"
 
 static
 bonelist bl;
 
-imgs::images il(16);
-pmd::pmd(const char *pathname,const char *motionpath){
+volatile
+enum vtaskstate{
+  VTASK_WAIT=0,
+  VTASK_VERTEX_CALCULATION,
+  VTASK_DRAW,
+  VTASK_QUIT
+} vtstate;
+
+imgs::images il;
+void pmd::init(const char *pathname,const char *motionpath){
+  il.init(16);
+  
   fil f;
   if(filopen(pathname,&f)!=0){
     printf("%s cannot open\n",pathname);
@@ -109,10 +125,12 @@ pmd::pmd(const char *pathname,const char *motionpath){
       bonelist[i].pos.x = b.headpos[0];
       bonelist[i].pos.y = b.headpos[1];
       bonelist[i].pos.z = b.headpos[2];
-      if(bonenamelist[i][0]=='\x82'&& //ひ
-	 bonenamelist[i][1]=='\x50'&&
-	 bonenamelist[i][2]=='\x82'&& //ざ
-	 bonenamelist[i][3]=='\x22'){//"ひざ" means knee.
+      if(bonenamelist[i][0]!='\0'&& //?
+	 bonenamelist[i][1]!='\0'&& //?
+	 bonenamelist[i][2]=='\x82'&& //ひ
+	 bonenamelist[i][3]=='\xd0'&&
+	 bonenamelist[i][4]=='\x82'&& //ざ
+	 bonenamelist[i][5]=='\xb4'){//"ひざ" means knee
 	if(ikknee[0] == 0){
 	  ikknee[0] = i;
 	}else{
@@ -142,9 +160,9 @@ pmd::pmd(const char *pathname,const char *motionpath){
   }
 }
 
-void pmd::calcvertexes(){
+void pmd::calcvertexes(int ps){
   fvector4 f;
-  for(unsigned int j=0;j<vertexcount;j++){
+  for(unsigned int j=ps*vertexcount/PROCESSNUM;j<(ps+1)*vertexcount/PROCESSNUM;j++){
 #ifdef DISABLE_ANIMATION
     f =  m.mul_fv4(fvector3(vertexlist[j]));
 #else
@@ -157,7 +175,7 @@ void pmd::calcvertexes(){
   }
 }
 
-void pmd::draw(uint16_t *drawbuff,uint16_t *zbuff){
+void pmd::draw(uint16_t *drawbuff,uint16_t *zbuff,int ps){
   texturetriangle t;
   fvector4 v[3];
   fvector2 uv[3];
@@ -168,7 +186,7 @@ void pmd::draw(uint16_t *drawbuff,uint16_t *zbuff){
 
   nextmati = materialfacecountlist[0];
 
-  for(uint32_t i=0;i<facecount;i++){
+  for(uint32_t i=ps*facecount/PROCESSNUM;i<(ps+1)*facecount/PROCESSNUM;i++){
     for(int j=0;j<3;j++){
       face[j]=facelist[i*3+j];
     }
@@ -197,24 +215,58 @@ void pmd::draw(uint16_t *drawbuff,uint16_t *zbuff){
 #ifdef __cplusplus
 extern "C"{
 #endif
-void* vTask(void* prm);
+  void* vTask(void* prm);
   int main3d(const char *model,const char *motion);
+  void send_line(int ypos, uint8_t *line);
 #ifdef __cplusplus
 };
 #endif
 
-pmd::~pmd(){
-  //todo, destruct all elements.
+
+uint16_t g_drawbuff[2][window_width*DRAW_NLINES];
+
+uint16_t g_zbuff[window_width*DRAW_NLINES];
+
+static
+pmd p;
+
+static
+int lastbuff=0;
+
+void *vTask(void *prm){
+  int ps=1;
+  int quit=0;
+  
+  while(!quit){
+    switch(vtstate){
+    case VTASK_WAIT:
+#if defined(PC)
+      usleep(0);
+#endif
+      break;
+    case VTASK_VERTEX_CALCULATION:
+      p.calcvertexes(1);
+      if(vtstate == VTASK_VERTEX_CALCULATION)
+	vtstate = VTASK_WAIT;
+      break;
+    case VTASK_DRAW:
+      p.draw(g_drawbuff[lastbuff],g_zbuff,1);
+      if(vtstate == VTASK_DRAW)
+	vtstate = VTASK_WAIT;
+      break;
+    case VTASK_QUIT:
+      quit=1;
+      break;
+    } 
+  }
 }
 
 int main3d(const char *model,const char *motion){
   Matrix4 projection;
   Matrix4 obj;
 
-  uint16_t g_drawbuff[2][window_width*DRAW_NLINES];
-  uint16_t g_zbuff[window_width*DRAW_NLINES];
   //  printf("%lu\n",sizeof(float));
-  pmd p(model,motion);
+  p.init(model,motion);
 #ifdef USE_SDL
   SDL_Init(SDL_INIT_VIDEO);
 
@@ -240,9 +292,7 @@ int main3d(const char *model,const char *motion){
   float disttarget = 25.f;
   fvector3 transtarget = fvector3(0,-12,-1.2);
   fvector3 trans = fvector3(0,-12,-1.2);
-  //  char fpsstr[60];
 
-  int lastbuff=0;
   veye = fvector3(0,0,-15.5f);
 
 #ifndef DISABLE_ANIMATION
@@ -263,6 +313,7 @@ int main3d(const char *model,const char *motion){
     /* usleep(20000); */
     if(SDL_PollEvent(&ev)){
       if(ev.type == SDL_QUIT)	{
+	vtstate = VTASK_QUIT;
 	break;
       }
     }
@@ -288,8 +339,23 @@ int main3d(const char *model,const char *motion){
 
     //描画ステージ
     p.m=m;
-    p.calcvertexes();
-    p.draw(g_drawbuff[lastbuff],g_zbuff);
+    vtstate = VTASK_VERTEX_CALCULATION;
+    p.calcvertexes(0);
+    while(vtstate != VTASK_WAIT)
+#if defined(PC)
+      usleep(0);
+#else
+    ;
+#endif
+    vtstate = VTASK_DRAW;
+    p.draw(g_drawbuff[lastbuff],g_zbuff,0);
+    while(vtstate != VTASK_WAIT)
+#if defined(PC)
+      usleep(0);
+#else
+    ;
+#endif
+    
 #ifndef DISABLE_OUTPUT
 #ifdef USE_SDL
     SDL_UpdateTexture(sdlTexture, NULL, (uint8_t*)g_drawbuff[lastbuff], window_width*2);
@@ -306,6 +372,7 @@ int main3d(const char *model,const char *motion){
     {
       static int ptime;
       float fps;
+      char fpsstr[20];
       fps = 1000000.f/(get_time()-ptime);
       sprintf(fpsstr,"%5.1ffps",fps);
       // lcd_boxfill(0xFFFF,0,240-12,64,12);
@@ -313,7 +380,7 @@ int main3d(const char *model,const char *motion){
       ptime = get_time();
     }
 #endif
-    send_line(draw_y*DRAW_NLINES,(uint8_t*)(g_drawbuff[lastbuff]));
+    send_line(0,(uint8_t*)(g_drawbuff[lastbuff]));
 #endif
 #endif//disable output flag
     lastbuff = 1-lastbuff;
